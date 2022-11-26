@@ -6,7 +6,7 @@ import (
 	"log"
 	"path/filepath"
 	"text/template"
-
+	"strings"
 	"github.com/opencontrol/doc-template/docx"
 )
 
@@ -46,11 +46,12 @@ func GetTemplate(filePath string) (*DocTemplate, error) {
 func (docTemplate *DocTemplate) Execute(exportPath string, data interface{}) error {
 	buf := new(bytes.Buffer)
 	err := docTemplate.Template.Execute(buf, data)
+	
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	err = docTemplate.Document.WriteToFile(exportPath, buf.String())
+	err = docTemplate.Document.WriteToFile(exportPath, strings.Replace(buf.String(), "<no value>", "", -1))
 	return err
 }
 
