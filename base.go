@@ -6,8 +6,8 @@ import (
 	"github.com/danilsolovyov/doc-template/docx"
 	"log"
 	"path/filepath"
-	"text/template"
 	"strings"
+	"text/template"
 )
 
 // Document interface is a combintation of methods use for generic data files
