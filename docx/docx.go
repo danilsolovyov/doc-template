@@ -2,6 +2,7 @@ package docx
 
 import (
 	"archive/zip"
+	"bytes"
 	"errors"
 	"io"
 	"log"
@@ -10,8 +11,9 @@ import (
 
 // Docx struct that contains data from a docx
 type Docx struct {
-	zipReader *zip.ReadCloser
-	content   string
+	zipReaderCloser *zip.ReadCloser
+	zipReader       *zip.Reader
+	content         string
 }
 
 // ReadFile func reads a docx file
@@ -24,12 +26,33 @@ func (d *Docx) ReadFile(path string) error {
 	if err != nil {
 		return errors.New("Cannot Read File")
 	}
-	d.zipReader = reader
+	d.zipReaderCloser = reader
 	if content == "" {
 		return errors.New("File has no content")
 	}
 	d.content = cleanText(content)
 	log.Printf("Read File `%s`", path)
+	return nil
+}
+
+// ReadBytes func reads a bytes as docx file
+func (d *Docx) ReadBytes(bytesArr []byte) error {
+	reader, err := zip.NewReader(bytes.NewReader(bytesArr), int64(len(bytesArr)))
+	if err != nil {
+		return errors.New("cannot create reader")
+	}
+	content, err := readText(reader.File)
+	if err != nil {
+		return errors.New("Cannot Read File")
+	}
+
+	d.zipReader = reader
+
+	if content == "" {
+		return errors.New("File has no content")
+	}
+	d.content = cleanText(content)
+
 	return nil
 }
 
@@ -59,19 +82,57 @@ func (d *Docx) WriteToFile(path string, data string) error {
 	return nil
 }
 
+func (d *Docx) GetAsBytes(data string) ([]byte, error) {
+	var buf bytes.Buffer
+
+	err := d.write(&buf, data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 // Close the document
 func (d *Docx) Close() error {
-	return d.zipReader.Close()
+	if d.zipReaderCloser != nil {
+		return d.zipReaderCloser.Close()
+	}
+	return nil
 }
 
 func (d *Docx) write(ioWriter io.Writer, data string) error {
 	var err error
 	// Reformat string, for some reason the first char is converted to &lt;
 	w := zip.NewWriter(ioWriter)
-	for _, file := range d.zipReader.File {
+	defer w.Close()
+
+	if d.zipReader != nil {
+		for _, file := range d.zipReader.File {
+			var writer io.Writer
+			var readCloser io.ReadCloser
+			writer, err = w.Create(file.Name)
+			if err != nil {
+				return err
+			}
+			readCloser, err = file.Open()
+			if err != nil {
+				return err
+			}
+			if file.Name == "word/document.xml" {
+				writer.Write([]byte(data))
+			} else {
+				writer.Write(streamToByte(readCloser))
+			}
+		}
+		return err
+	}
+
+	for _, file := range d.zipReaderCloser.File {
 		var writer io.Writer
 		var readCloser io.ReadCloser
-		writer, err := w.Create(file.Name)
+		writer, err = w.Create(file.Name)
 		if err != nil {
 			return err
 		}
@@ -85,6 +146,6 @@ func (d *Docx) write(ioWriter io.Writer, data string) error {
 			writer.Write(streamToByte(readCloser))
 		}
 	}
-	w.Close()
+
 	return err
 }

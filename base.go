@@ -3,11 +3,11 @@ package docTemp
 import (
 	"bytes"
 	"errors"
+	"github.com/danilsolovyov/doc-template/docx"
 	"log"
 	"path/filepath"
 	"text/template"
 	"strings"
-	"github.com/opencontrol/doc-template/docx"
 )
 
 // Document interface is a combintation of methods use for generic data files
@@ -16,6 +16,7 @@ type Document interface {
 	UpdateContent(string)
 	GetContent() string
 	WriteToFile(string, string) error
+	GetAsBytes(string) ([]byte, error)
 	Close() error
 }
 
@@ -46,7 +47,7 @@ func GetTemplate(filePath string) (*DocTemplate, error) {
 func (docTemplate *DocTemplate) Execute(exportPath string, data interface{}) error {
 	buf := new(bytes.Buffer)
 	err := docTemplate.Template.Execute(buf, data)
-	
+
 	if err != nil {
 		log.Println(err)
 		return err
