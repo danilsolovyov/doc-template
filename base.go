@@ -31,7 +31,7 @@ type DocTemplate struct {
 func GetTemplate(filePath string) (*DocTemplate, error) {
 	var document Document
 	switch filepath.Ext(filePath) {
-	case ".docx":
+	case ".docx", ".templ":
 		document = new(docx.Docx)
 	default:
 		return nil, errors.New("Unsupported Document Type")
