@@ -43,6 +43,15 @@ func GetTemplate(filePath string) (*DocTemplate, error) {
 	return &DocTemplate{Document: document, Template: template.New("docTemp")}, nil
 }
 
+func GetBytesTemplate(file []byte) (*DocTemplate, error) {
+	document := new(docx.Docx)
+	err := document.ReadBytes(file)
+	if err != nil {
+		return nil, err
+	}
+	return &DocTemplate{Document: document, Template: template.New("docTemp")}, nil
+}
+
 // Execute func runs the template and sends the output to the export path
 func (docTemplate *DocTemplate) Execute(exportPath string, data interface{}) error {
 	buf := new(bytes.Buffer)
@@ -54,6 +63,24 @@ func (docTemplate *DocTemplate) Execute(exportPath string, data interface{}) err
 	}
 	err = docTemplate.Document.WriteToFile(exportPath, strings.Replace(buf.String(), "<no value>", "", -1))
 	return err
+}
+
+func (docTemplate *DocTemplate) ExecuteBytes(data interface{}) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := docTemplate.Template.Execute(buf, data)
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	result, err := docTemplate.Document.GetAsBytes(strings.Replace(buf.String(), "<no value>", "", -1))
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return result, err
 }
 
 // AddFunctions adds functions to the template
